@@ -1,26 +1,25 @@
-import sectionproperties.pre.sections as sections
-from sectionproperties.analysis.cross_section import CrossSection
-
 import numpy as np
 import matplotlib.pyplot as plt
 
-#using the easy boom analysis
+#using the boom approximation as analysis method
 class WinboxSection():
     def __init__(self):
-        self.Nstringerstop = 30
-        self.Nstringersbottom = 10
-        self.Astringertop = 0.001 # [m^2]
-        self.Astringerbottom = 0.001 # [m^2]
-        self.Asparcap = 0.005 # [m^2]
-        self.As_sparcaps = [0.005, #top right sparcap
-                            0.003, #top left sparcap
-                            0.003, #bottom left
-                            0.005] #bottom right
-        self.Hfront = 0.6
-        self.Hback = 0.45
-        self.tSpar = 0.02
-        self.tskin = 0.001
-        self.c = 3.0
+        self.Nstringerstop = 30 # number of stringers on the upper panel of the wingbox
+        self.Nstringersbottom = 10 # number of stringers on the bottom panel of the wingbox
+        self.Astringertop = 0.001 # [m^2] the cross sectional area of the top stringer
+        self.Astringerbottom = 0.001 # [m^2] the cross sectional area of the bottom stringer
+        self.Asparcap = 0.005 # [m^2] I think this one has become obselete
+        self.As_sparcaps = [0.005, # [m^2] the cross sectional area of top right sparcap
+                            0.003, # [m^2] the cross sectional area of top left sparcap
+                            0.003, # [m^2] the cross sectional area of bottom left
+                            0.005] # [m^2] the cross sectional area of bottom right
+        self.Hfront = 0.6 # [m] height of the front spar
+        self.Hback = 0.45 # [m] height of the back spar
+        self.tSpar = 0.02 # [m] thickness of the spar
+        self.tskin = 0.001 # [m] thickness of the skin
+        self.c = 3.0 # legnth of the root chord
+
+        #internally calculated parameters
         self.boomList = []
         self.tList = [] # list of the thickness of each section between boomlist[i] and boomlist[i-1]
         self.Alist = [] #  just a list of the stringer crossectional area with out panel addition
@@ -70,11 +69,11 @@ class WinboxSection():
         self.tList.append(self.tskin)
 
         self.Alist = [b[2] for b in self.boomList]
-        print(self.Alist)
+        #print(self.Alist)
         for i in range(20):
             a,b,c,NA =self.calculateParameters()
             xs,ys,A = NA
-            print(A)
+            #print(A)
             Y = lambda x : A*x + self.shearCenter[1]
 
             for i in range(len(self.boomList)):
@@ -87,8 +86,9 @@ class WinboxSection():
                 S12 = np.sqrt((b2[1]-b1[1])**2+(b2[0]-b1[0])**2)
                 S23 = np.sqrt((b3[1]-b2[1])**2+(b3[0]-b2[0])**2)
                 self.boomList[i][2] = self.Alist[i]
-                self.boomList[i][2] += t12*S12/6*(2+(b1[1]-Y(b1[0]))/(b2[1]-Y(b2[0])))
-                self.boomList[i][2] += t23*S23/6*(2+(b1[1]-Y(b1[0]))/(b2[1]-Y(b2[0])))
+                self.boomList[i][2] += (t12*S12/6)*(2+(b1[1]-Y(b1[0]))/(b2[1]-Y(b2[0])))
+                self.boomList[i][2] += (t23*S23/6)*(2+(b1[1]-Y(b1[0]))/(b2[1]-Y(b2[0])))
+        #print([i[2] for i in self.boomList])
 
     def getCentroid(self):
         if len(self.boomList) == 0: self.createGeometry()
@@ -173,6 +173,8 @@ class WinboxSection():
     def getShearCenter(self):
         qSy = self.getUnitShearflow(0,1)
         qSx = self.getUnitShearflow(1,0)
+        self.qSy = qSy
+        self.qSx = qSx
         #print(qSx)
         x_sc = 0.0
         y_sc = 0.0 #(qSx[0][0]+qSx[1])*(self.boomList[0][1]-self.boomList[-1][1])*(self.boomList[0][0]-self.centroid[0])
@@ -218,6 +220,10 @@ class WinboxSection():
         plt.axis("equal")
         plt.xlim( self.shearCenter[0]-0.1 if self.shearCenter[0]<0 else -0.1, self.c+0.1)
         plt.legend()
+        plt.xlabel("x [m]")
+        plt.ylabel("y [m]")
+        plt.title("wingbox boom approximated layout")
+        plt.grid()
         plt.show()
         plt.close()
 
@@ -227,6 +233,45 @@ class WinboxSection():
         SC = self.getShearCenter()
         NA = self.getNA()
         return (centroid, inertiaMoments, SC ,NA)
+    
+    def saveParameterstoFile(self, fname):
+        c,I,SC,NA = test.calculateParameters()
+        outfile = open(fname,"w")
+        outfile.write("parameter, value [SI-units]\n")
+        outfile.write("n top stringers,{}\n".format(self.Nstringerstop))
+        outfile.write("A stringer top,{}\n".format(self.Astringertop))
+        outfile.write("n bottom stringers,{}\n".format(self.Nstringersbottom))
+        outfile.write("A stringer bottom,{}\n".format(self.Astringerbottom))
+        outfile.write("A cap top left,{}\n".format(self.As_sparcaps[0]))
+        outfile.write("A cap top right,{}\n".format(self.As_sparcaps[1]))
+        outfile.write("A cap bottom right,{}\n".format(self.As_sparcaps[2]))
+        outfile.write("A cap bottom left,{}\n".format(self.As_sparcaps[3]))
+        outfile.write("H frontspar,{}\n".format(self.Hfront))
+        outfile.write("H backspar,{}\n".format(self.Hback))
+        outfile.write("t spar,{}\n".format(self.tSpar))
+        outfile.write("t skin,{}\n".format(self.tskin))
+        outfile.write("wingbox length,{}\n".format(self.c))
+        outfile.write("\n")
+        outfile.write("centroid x,{}\ncentroid y,{}\nA crossection,{}\n".format(*c))
+        # outfile.write("centroid y,{}\n".format(c[1]))
+        # outfile.write("A crossection,{}\n".format(c[2]))
+        outfile.write("Ixx,{}\nIyy,{}\nIxy,{}\n".format(*I))
+        outfile.write("shearcenter x,{}\nshearcenter y, {}\n".format(*SC))
+        outfile.write("d/dx(NA),{}\n".format(NA[2]))
+        outfile.close()
+
+    def saveBoomtoFile(self, fname):
+        outfile = open(fname, "w")
+        outfile.write("boom, area, dq_y, dq_x\n")
+        for i in range(len(self.boomList)):
+            outfile.write("{},{:.6},{:.6},{:.6}\n".format(
+                    i+1,
+                    self.boomList[i][2], 
+                    self.qSy[0][(i+1)%len(self.boomList)]+self.qSy[1],
+                    self.qSx[0][(i+1)%len(self.boomList)]+self.qSx[1]
+                    ))
+        outfile.close()
+    
 
 if __name__ == "__main__":
     test = WinboxSection()
@@ -242,3 +287,5 @@ if __name__ == "__main__":
     print("shear center: ", SC)
     print("d/dx(NA): ", NA[2])
     test.plotGeometry()
+    test.saveBoomtoFile("boom.csv")
+    test.saveParameterstoFile("parameters.csv")
