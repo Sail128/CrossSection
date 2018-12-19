@@ -29,7 +29,7 @@ class WinboxSection():
         self.Iyy = None # not calculated is None
         self.shearCenter = []
         self.NA = None # tuple(xs, ys, alpha)
-        self.createGeometry()
+        #self.createGeometry()
 
     def createGeometry(self):
         # tho boom list is ordered clockwise starting at the top left corner
@@ -86,8 +86,8 @@ class WinboxSection():
                 S12 = np.sqrt((b2[1]-b1[1])**2+(b2[0]-b1[0])**2)
                 S23 = np.sqrt((b3[1]-b2[1])**2+(b3[0]-b2[0])**2)
                 self.boomList[i][2] = self.Alist[i]
-                self.boomList[i][2] += (t12*S12/6)*(2+(b1[1]-Y(b1[0]))/(b2[1]-Y(b2[0])))
-                self.boomList[i][2] += (t23*S23/6)*(2+(b1[1]-Y(b1[0]))/(b2[1]-Y(b2[0])))
+                self.boomList[i][2] += (t12*S12/6)*(2+np.abs(b1[1]-Y(b1[0]))/np.abs(b2[1]-Y(b2[0])))
+                self.boomList[i][2] += (t23*S23/6)*(2+np.abs(b1[1]-Y(b1[0]))/np.abs(b2[1]-Y(b2[0])))
         #print([i[2] for i in self.boomList])
 
     def getCentroid(self):
@@ -109,7 +109,7 @@ class WinboxSection():
         Iyy = 0.0
         Ixy = 0.0
         for boom in self.boomList:
-            I = np.pi/4 * (boom[2]/np.pi)**2
+            I = 0.0#np.pi/4 * (boom[2]/np.pi)**2
             dx = boom[0]-self.centroid[0]
             dy = boom[1]-self.centroid[1]
             #print(I, dy, boom[2]* dy**2)
@@ -199,7 +199,7 @@ class WinboxSection():
         self.NA = (xs, ys, A)
         return self.NA
 
-    def plotGeometry(self):
+    def plotGeometry(self, fname=None):
         xs = [i[0] for i in self.boomList]
         ys = [i[1] for i in self.boomList]
         As = [i[2]*10000 for i in self.boomList]
@@ -222,9 +222,12 @@ class WinboxSection():
         plt.legend()
         plt.xlabel("x [m]")
         plt.ylabel("y [m]")
-        plt.title("wingbox boom approximated layout")
+        plt.title("wingbox boom approximated layout for section {}".format(fname.split("_")[-1][0]))
         plt.grid()
-        plt.show()
+        if fname == None:
+            plt.show()
+        else:
+            plt.savefig(fname)
         plt.close()
 
     def calculateParameters(self):
@@ -235,7 +238,7 @@ class WinboxSection():
         return (centroid, inertiaMoments, SC ,NA)
     
     def saveParameterstoFile(self, fname):
-        c,I,SC,NA = test.calculateParameters()
+        c,I,SC,NA = self.calculateParameters()
         outfile = open(fname,"w")
         outfile.write("parameter, value [SI-units]\n")
         outfile.write("n top stringers,{}\n".format(self.Nstringerstop))
