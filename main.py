@@ -1,6 +1,7 @@
 import EasySectionAnalysis as cs
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 def general_plotter(
     plots, 
@@ -94,10 +95,16 @@ def latex_fig_nx2(graphs:list):
     return "\n".join(imgstr)
 
 
-def main():
-    sections = np.genfromtxt("finalinput.csv")
+def calculateWing(infile):
+    sections = np.genfromtxt(infile)
+    casename = infile.split(".")[0]
+    saveFiles = True
     sectioncoef = []
     pltnames=[]
+    sc_xs8=[]
+    sc_ys8=[]
+    sc_xs=[]
+    sc_ys=[]
     for row in sections:
         # row:
         #   0   1      2   3    4     5     6   7    8           9       10
@@ -113,7 +120,7 @@ def main():
                             row[8], # [m^2] the cross sectional area of bottom left
                             row[8]] # [m^2] the cross sectional area of bottom right
         sec.Hfront = row[5] # [m] height of the front spar
-        sec.Hback = row[5]#*0.9 # [m] height of the back spar
+        sec.Hback = row[5]#*0.8 # [m] height of the back spar
         sec.tSpar = row[7] # [m] thickness of the spar
         sec.tskin = row[0] # [m] thickness of the skin
         sec.c = row[6] # legnth of the root chord
@@ -122,9 +129,16 @@ def main():
 
         sectioncoef.append(sec.calculateParameters())
         pltnames.append("plot_section_{}.png".format(int(row[2])))
-        sec.plotGeometry(fname="sections/plot_section_{}.png".format(int(row[2])))
-        sec.saveBoomtoFile("sections/boom_section_{}.csv".format(int(row[2])))
-        sec.saveParameterstoFile("sections/pars_section_{}.csv".format(int(row[2])))
+
+        c,I,SC,NA  = sectioncoef[-1]
+        sc_x,sc_y = SC
+        sc_xs8.append(sc_x/sec.c)
+        sc_ys8.append((sec.Hfront/2+sc_y)/sec.Hfront)
+
+        if saveFiles:
+            sec.plotGeometry(fname="{0}/sections/{0}_plot_section_{1}.png".format(casename, int(row[2])))
+            sec.saveBoomtoFile("{0}/sections/{0}_boom_section_{1}.csv".format(casename, int(row[2])))
+            sec.saveParameterstoFile("{0}/sections/{0}_pars_section_{1}.csv".format(casename, int(row[2])))
 
 
     xs = np.linspace(0.51375, 41.1/2,num=20)
@@ -138,11 +152,32 @@ def main():
     ylabel="Ixx [m^4]",
     legend=0,
     grid=True,
-    fname="Ixx-plot.png"
+    fname="{0}/{0}_Ixx-plot.png".format(casename),
+    show=False
 
     )
 
-    print(latex_fig_nx2(["Images/crossections/{}".format(x) for x in pltnames]))
+    # plt.scatter(sc_xs8,sc_ys8,label="shearcenters of each section",marker="o", c="b")
+    # plt.scatter(sum(sc_xs8) / len(sc_xs8), sum(sc_ys8) / len(sc_ys8),label="average shearcenter",marker="x", c="r")
+    # plt.title("position of shearcenter for back-spar = 0.8*front-spar")
+    # plt.xlabel("x/c")
+    # plt.ylabel("y/(t/c)")
+    # plt.legend()
+    # plt.grid()
+    # plt.show()
+    # plt.close()
+
+def main():
+    cases = [
+        "Case1.csv",
+        "Case2.csv",
+        "Case3.csv",
+        "Case4.csv",
+        "Case5.csv"
+    ]
+    for case in cases:
+        calculateWing(case)
+    # print(latex_fig_nx2(["Images/crossections/{}".format(x) for x in pltnames]))
     # wingbox = section.WinboxSection()
     # wingbox.createGeometry()
     # wingbox.plotGeometry()
