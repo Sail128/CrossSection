@@ -100,6 +100,8 @@ def calculateWing(infile):
     casename = infile.split(".")[0]
     saveFiles = True
     sectioncoef = []
+    maxstresses = []
+    minstresses = []
     pltnames=[]
     sc_xs8=[]
     sc_ys8=[]
@@ -107,8 +109,8 @@ def calculateWing(infile):
     sc_ys=[]
     for row in sections:
         # row:
-        #   0   1      2   3    4     5     6   7    8           9       10
-        # tskin,Ireq,Nsec,chord,t/c,Hfront, w, tspar,Astringer,N_str_top,N_str_bot,
+        #   0   1      2   3    4     5     6   7    8           9       10         11   12     13
+        # tskin,Ireq,Nsec,chord,t/c,Hfront, w, tspar,Astringer,N_str_top,N_str_bot, I,moment, stress
         sec = cs.WinboxSection()
         sec.Nstringerstop = int(row[9]) # number of stringers on the upper panel of the wingbox
         sec.Nstringersbottom = int(row[10]) # number of stringers on the bottom panel of the wingbox
@@ -132,6 +134,8 @@ def calculateWing(infile):
 
         c,I,SC,NA  = sectioncoef[-1]
         sc_x,sc_y = SC
+        maxstresses.append((c[1]+sec.Hfront/2)*row[12]/I[0])
+        minstresses.append(-(sec.Hfront/2-c[1])*row[12]/I[0])
         sc_xs8.append(sc_x/sec.c)
         sc_ys8.append((sec.Hfront/2+sc_y)/sec.Hfront)
 
@@ -145,7 +149,7 @@ def calculateWing(infile):
     general_plotter(
         [
             (xs,sections[:,1],"required stiffness","."),
-            (xs,[x[1][0] for x in sectioncoef],"stiffness with adjusted N.A.","^")
+            (xs,[x[1][0] for x in sectioncoef],"stiffness calculated from geometry","^")
     ],
     title="required stiffness and calculated stiffness along the half wing",
     xlabel="[m]",
@@ -154,7 +158,20 @@ def calculateWing(infile):
     grid=True,
     fname="{0}/{0}_Ixx-plot.png".format(casename),
     show=False
-
+    )
+    general_plotter(
+        [
+            (xs,sections[:,13],"max calculated normal stress","."),
+            (xs,maxstresses,"maximum calculated normal stress with N.A. established","^"),
+            #(xs,minstresses,"minimum calculated normal stress with N.A. established","^")
+    ],
+    title="max normal stress along the half wing",
+    xlabel="[m]",
+    ylabel="stress [Pa]",
+    legend=0,
+    grid=True,
+    fname="{0}/{0}_stress-plot.png".format(casename),
+    show=False
     )
 
     # plt.scatter(sc_xs8,sc_ys8,label="shearcenters of each section",marker="o", c="b")
